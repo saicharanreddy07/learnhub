@@ -11,7 +11,7 @@ pipelines:
         branch: main
 
     stages:
-      - Build:
+      - validate:
           clean_workspace: true
           jobs:
             validate:
@@ -28,3 +28,26 @@ pipelines:
                         test -f docker-compose.yml
 
                         echo "LearnHub source files verified"
+      - Build:
+          jobs:
+            docker_build:
+              tasks:
+                - exec:
+                    command: bash
+                    arguments:
+                      - -c
+                      - |
+                        set -e
+
+                        echo "Checking Docker installation"
+                        docker version
+
+                        echo "Checking Docker Compose"
+                        docker compose version
+
+                        echo "Validating Compose configuration"
+                        docker compose config
+
+                        echo "Building LearnHub images"
+                        docker compose build
+
