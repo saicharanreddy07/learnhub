@@ -7,7 +7,7 @@ pipelines:
 
     materials:
       learnhub_git:
-        git: https://github.com/saicharanreddy07/learnhub.gitL
+        git: https://github.com/saicharanreddy07/learnhub.git
         branch: main
 
     stages:
