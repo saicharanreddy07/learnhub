@@ -1,4 +1,3 @@
-
 format_version: 10
 
 pipelines:
@@ -11,7 +10,8 @@ pipelines:
         branch: main
 
     stages:
-      - validate:
+      # Stage 1: Validate source files
+      - Validate:
           clean_workspace: true
           jobs:
             validate:
@@ -21,6 +21,8 @@ pipelines:
                     arguments:
                       - -c
                       - |
+                        set -e
+
                         echo "Starting LearnHub validation"
 
                         test -f backend/app/main.py
@@ -28,6 +30,8 @@ pipelines:
                         test -f docker-compose.yml
 
                         echo "LearnHub source files verified"
+
+      # Stage 2: Build Docker images
       - Build:
           jobs:
             docker_build:
@@ -46,8 +50,61 @@ pipelines:
                         docker compose version
 
                         echo "Validating Compose configuration"
-                        docker compose config
+                        docker compose -p learnhub config
 
                         echo "Building LearnHub images"
-                        docker compose build
+                        docker compose -p learnhub build
 
+                        echo "Docker images built successfully"
+
+      # Stage 3: Deploy application
+      - Deploy:
+          jobs:
+            deploy:
+              tasks:
+                - exec:
+                    command: bash
+                    arguments:
+                      - -c
+                      - |
+                        set -e
+
+                        echo "Deploying LearnHub"
+
+                        docker compose -p learnhub up -d
+
+                        echo "LearnHub deployment command completed"
+
+      # Stage 4: Verify deployment
+      - Verify:
+          jobs:
+            verify:
+              tasks:
+                - exec:
+                    command: bash
+                    arguments:
+                      - -c
+                      - |
+                        set -e
+
+                        echo "Checking LearnHub containers"
+
+                        containers=$(docker compose -p learnhub ps -q)
+
+                        if [ -z "$containers" ]; then
+                          echo "ERROR: No LearnHub containers found"
+                          exit 1
+                        fi
+
+                        for container in $containers; do
+                          status=$(docker inspect -f '{{.State.Status}}' "$container")
+
+                          echo "Container $container: $status"
+
+                          if [ "$status" != "running" ]; then
+                            echo "ERROR: Container is not running"
+                            exit 1
+                          fi
+                        done
+
+                        echo "LearnHub deployment verified successfully"
